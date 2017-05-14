@@ -1,0 +1,24 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'application'
+
+repositories {
+    mavenCentral()
+	maven {
+		url "http://packages.confluent.io/maven/"
+	}
+}
+
+dependencies {
+	compile 'com.typesafe.akka:akka-stream_2.11:2.4.17'
+	compile group: 'org.apache.kafka', name: 'kafka-streams', version: '0.10.2.0'
+	compile group: "com.typesafe.akka", name: "akka-stream-kafka_2.11", version: "0.14"
+	compile "org.apache.avro:avro:1.8.1"
+	compile "io.confluent:kafka-avro-serializer:3.2.0"
+	compile "io.confluent:kafka-schema-registry:3.2.0"
+	compile "io.confluent:common:3.2.0"
+	testCompile 'junit:junit:4.12'
+}
+
+mainClassName = 'org.z.logdumper.Main'
