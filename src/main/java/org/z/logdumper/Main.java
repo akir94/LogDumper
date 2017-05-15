@@ -1,5 +1,6 @@
 package org.z.logdumper;
 
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.Duration;
@@ -29,15 +30,8 @@ public class Main {
 	private static final Duration DUMP_CUTOFF_POINT = Duration.ofMillis(250);
 	
 	public static void main(String[] args) {
-		Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "log-dumper");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, System.getenv("KAFKA_ADDRESS"));
-        props.put("key.deserializer", new KafkaAvroDeserializer());
-        props.put("value.deserializer", new KafkaAvroDeserializer());
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-
-        try (KafkaConsumer<GenericRecord, GenericRecord> consumer = new KafkaConsumer<>(props);
-        		RecordWriter writer = new RecordWriter(new FileOutputStream("dump_file"));) {
+        try (KafkaConsumer<GenericRecord, GenericRecord> consumer = createKafkaConsumer();
+        		RecordWriter writer = createRecordWriter();) {
 	        List<ConsumerRecord<GenericRecord, GenericRecord>> recordsToDump = new ArrayList<>();
 	        while(true) {
 	        	Instant start = Instant.now();
@@ -56,6 +50,24 @@ public class Main {
         } catch (IOException e) {
 			throw new ExceptionInInitializerError(e);
         }
+	}
+	
+	private static KafkaConsumer<GenericRecord, GenericRecord> createKafkaConsumer() {
+		Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "log-dumper");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, System.getenv("KAFKA_ADDRESS"));
+        props.put("key.deserializer", new KafkaAvroDeserializer());
+        props.put("value.deserializer", new KafkaAvroDeserializer());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        return new KafkaConsumer<>(props);
+	}
+	
+	private static RecordWriter createRecordWriter() {
+		try {
+			return new RecordWriter(new FileOutputStream(System.getenv("DUMP_FILE")));
+		} catch (FileNotFoundException e) {
+			throw new ExceptionInInitializerError(e);
+		}
 	}
 	
 	/**
