@@ -29,20 +29,16 @@ public class RecordWriter implements Closeable{
 		this.datumWriter = new GenericDatumWriter<>();
 	}
 	
-	public void write(List<ConsumerRecord<GenericRecord, GenericRecord>> records) {
-		for (ConsumerRecord<GenericRecord, GenericRecord> record : records) {
+	public void write(List<ConsumerRecord<Object, Object>> records) {
+		for (ConsumerRecord<Object, Object> record : records) {
+			System.out.println("writing record");
 			try {
-				datumWriter.write(record.value(), encoder);
-				datumWriter.write(record.key(), encoder);
-				encoder.flush();
-				bufferWriter.writeUTF(record.topic());
-				bufferWriter.writeInt(record.partition());
-				bufferWriter.writeLong(record.timestamp());
-				bufferWriter.flush();
+				writeData(record);
 			} catch (IOException e) {
 				System.out.println("Failed to write ConsumerRecord to temporary buffer");
 				e.printStackTrace();
 			}
+			System.out.println("done");
 		}
 		try {
 			buffer.writeTo(outputStream);
@@ -51,6 +47,21 @@ public class RecordWriter implements Closeable{
 			e.printStackTrace();
 		}
 		buffer.reset();
+	}
+	
+	private void writeData(ConsumerRecord<Object, Object> record) throws IOException {
+		writeGenericRecord((GenericRecord) record.value());
+		writeGenericRecord((GenericRecord) record.key());
+		encoder.flush();
+		bufferWriter.writeUTF(record.topic());
+		bufferWriter.writeInt(record.partition());
+		bufferWriter.writeLong(record.timestamp());
+		bufferWriter.flush();
+	}
+	
+	private void writeGenericRecord(GenericRecord record) throws IOException {
+		datumWriter.setSchema(record.getSchema());
+		datumWriter.write(record, encoder);
 	}
 
 	@Override

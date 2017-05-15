@@ -6,17 +6,31 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
 
+import org.apache.avro.Schema;
+import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.streams.StreamsConfig;
 
+import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
+import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
 
 /**
  * Polls kafka for records, and writes them in chronological order,
@@ -30,9 +44,12 @@ public class Main {
 	private static final Duration DUMP_CUTOFF_POINT = Duration.ofMillis(250);
 	
 	public static void main(String[] args) {
-        try (KafkaConsumer<GenericRecord, GenericRecord> consumer = createKafkaConsumer();
+		SchemaRegistryClient schemaRegistry = new MockSchemaRegistryClient();
+//		Executors.newSingleThreadExecutor().submit(() -> writeSomeData(schemaRegistry));
+		
+        try (KafkaConsumer<Object, Object> consumer = createKafkaConsumer(schemaRegistry);
         		RecordWriter writer = createRecordWriter();) {
-	        List<ConsumerRecord<GenericRecord, GenericRecord>> recordsToDump = new ArrayList<>();
+	        List<ConsumerRecord<Object, Object>> recordsToDump = new ArrayList<>();
 	        while(true) {
 	        	Instant start = Instant.now();
 	        	processRecords(consumer.poll(0), recordsToDump, writer);
@@ -52,19 +69,27 @@ public class Main {
         }
 	}
 	
-	private static KafkaConsumer<GenericRecord, GenericRecord> createKafkaConsumer() {
+	private static KafkaConsumer<Object, Object> createKafkaConsumer(SchemaRegistryClient schemaRegistry) {
 		Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "log-dumper");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, System.getenv("KAFKA_ADDRESS"));
-        props.put("key.deserializer", new KafkaAvroDeserializer());
-        props.put("value.deserializer", new KafkaAvroDeserializer());
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        return new KafkaConsumer<>(props);
+        props.put("group.id", "groupId");
+        KafkaConsumer<Object, Object> consumer = new KafkaConsumer<>(props, 
+        		new KafkaAvroDeserializer(schemaRegistry), new KafkaAvroDeserializer(schemaRegistry));
+        consumer.subscribe(Pattern.compile(".*"), new ConsumerRebalanceListener() { //no-op consumer rebalance listener
+			@Override
+			public void onPartitionsRevoked(Collection<TopicPartition> partitions) {}
+			
+			@Override
+			public void onPartitionsAssigned(Collection<TopicPartition> partitions) {}
+		});
+        return consumer;
 	}
 	
 	private static RecordWriter createRecordWriter() {
 		try {
-			return new RecordWriter(new FileOutputStream(System.getenv("DUMP_FILE")));
+			return new RecordWriter(new FileOutputStream("dump_file"));
 		} catch (FileNotFoundException e) {
 			throw new ExceptionInInitializerError(e);
 		}
@@ -83,11 +108,11 @@ public class Main {
 	 * @param recordsToDump The records we put aside in the previous poll
 	 * @param writer
 	 */
-	private static void processRecords(ConsumerRecords<GenericRecord, GenericRecord> records, 
-			List<ConsumerRecord<GenericRecord, GenericRecord>> recordsToDump, RecordWriter writer) {
+	private static void processRecords(ConsumerRecords<Object, Object> records, 
+			List<ConsumerRecord<Object, Object>> recordsToDump, RecordWriter writer) {
 		Instant dumpCutoffPoint = Instant.now().minus(DUMP_CUTOFF_POINT);
-		List<ConsumerRecord<GenericRecord, GenericRecord>> recordsToDumpLater = new ArrayList<>();
-		for (ConsumerRecord<GenericRecord, GenericRecord> record : records) {
+		List<ConsumerRecord<Object, Object>> recordsToDumpLater = new ArrayList<>();
+		for (ConsumerRecord<Object, Object> record : records) {
     		if (record.timestamp() < dumpCutoffPoint.getEpochSecond()) {
     			recordsToDump.add(record);
     		} else {
@@ -97,11 +122,52 @@ public class Main {
 		dumpRecords(recordsToDump, recordsToDumpLater, writer);
 	}
 
-	private static void dumpRecords(List<ConsumerRecord<GenericRecord, GenericRecord>> recordsToDump, 
-			List<ConsumerRecord<GenericRecord, GenericRecord>> recordsToDumpLater, RecordWriter writer) {
+	private static void dumpRecords(List<ConsumerRecord<Object, Object>> recordsToDump, 
+			List<ConsumerRecord<Object, Object>> recordsToDumpLater, RecordWriter writer) {
 		recordsToDump.sort((record1, record2) -> Long.compare(record1.timestamp(), record2.timestamp()));
 		writer.write(recordsToDump);
 		recordsToDump.clear();
 		recordsToDump.addAll(recordsToDumpLater);
 	}
+	
+//	private static void writeSomeData(SchemaRegistryClient schemaRegistry) {
+//		try{
+//        	Thread.sleep(2000);
+//        } catch (InterruptedException e) {
+//        	
+//        }
+//		
+//		Properties props = new Properties();
+//        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "log-dumper");
+//        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+//        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+//        props.put("group.id", "groupId");
+//        KafkaProducer<Object, Object> producer = new KafkaProducer<>(props, 
+//        		new KafkaAvroSerializer(schemaRegistry), new KafkaAvroSerializer(schemaRegistry));
+//        
+//        Schema schema = new Schema.Parser().parse("{\"type\": \"record\", \"name\": \"name\", \"fields\": [{\"name\": \"field\", \"type\": \"long\"}]}");
+//        GenericRecord key1 = new GenericRecordBuilder(schema).set("field", 45L).build();
+//        GenericRecord value1 = new GenericRecordBuilder(schema).set("field", 1234L).build();
+//        producer.send(new ProducerRecord<Object, Object>("test", key1, value1));
+//        
+//        try{
+//        	Thread.sleep(2000);
+//        } catch (InterruptedException e) {
+//        	
+//        }
+//        
+//        GenericRecord key2 = new GenericRecordBuilder(schema).set("field", 56L).build();
+//        GenericRecord value2 = new GenericRecordBuilder(schema).set("field", 1234L).build();
+//        producer.send(new ProducerRecord<Object, Object>("test", key2, value2));
+//        
+//        try{
+//        	Thread.sleep(2000);
+//        } catch (InterruptedException e) {
+//        	
+//        }
+//        
+//        GenericRecord key3 = new GenericRecordBuilder(schema).set("field", 67L).build();
+//        GenericRecord value3 = new GenericRecordBuilder(schema).set("field", 1234L).build();
+//        producer.send(new ProducerRecord<Object, Object>("test", key3, value3));
+//	}
 }
