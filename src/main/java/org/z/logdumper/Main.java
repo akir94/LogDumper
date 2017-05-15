@@ -31,7 +31,7 @@ public class Main {
 	public static void main(String[] args) {
 		Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "log-dumper");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, System.getenv("KAFKA_ADDRESS"));
         props.put("key.deserializer", new KafkaAvroDeserializer());
         props.put("value.deserializer", new KafkaAvroDeserializer());
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
