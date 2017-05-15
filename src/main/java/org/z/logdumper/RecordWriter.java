@@ -12,6 +12,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.util.Utf8;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 public class RecordWriter implements Closeable{
@@ -50,18 +51,23 @@ public class RecordWriter implements Closeable{
 	}
 	
 	private void writeData(ConsumerRecord<Object, Object> record) throws IOException {
-		writeGenericRecord((GenericRecord) record.value());
-		writeGenericRecord((GenericRecord) record.key());
-		encoder.flush();
+		writeKeyAndValue((String) record.key(), (GenericRecord) record.value());
 		bufferWriter.writeUTF(record.topic());
 		bufferWriter.writeInt(record.partition());
 		bufferWriter.writeLong(record.timestamp());
 		bufferWriter.flush();
 	}
 	
-	private void writeGenericRecord(GenericRecord record) throws IOException {
-		datumWriter.setSchema(record.getSchema());
-		datumWriter.write(record, encoder);
+	private void writeKeyAndValue(String key, GenericRecord value) throws IOException {
+		datumWriter.setSchema(value.getSchema());
+		datumWriter.write(value, encoder);
+		if (key != null) {
+			encoder.writeBoolean(true);
+			encoder.writeString(key);
+		} else {
+			encoder.writeBoolean(false);
+		}
+		encoder.flush();
 	}
 
 	@Override

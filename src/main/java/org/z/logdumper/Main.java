@@ -17,6 +17,7 @@ import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.avro.util.Utf8;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -146,7 +147,7 @@ public class Main {
 //        		new KafkaAvroSerializer(schemaRegistry), new KafkaAvroSerializer(schemaRegistry));
 //        
 //        Schema schema = new Schema.Parser().parse("{\"type\": \"record\", \"name\": \"name\", \"fields\": [{\"name\": \"field\", \"type\": \"long\"}]}");
-//        GenericRecord key1 = new GenericRecordBuilder(schema).set("field", 45L).build();
+//        Utf8 key1 = new Utf8("key1");
 //        GenericRecord value1 = new GenericRecordBuilder(schema).set("field", 1234L).build();
 //        producer.send(new ProducerRecord<Object, Object>("test", key1, value1));
 //        
@@ -156,7 +157,7 @@ public class Main {
 //        	
 //        }
 //        
-//        GenericRecord key2 = new GenericRecordBuilder(schema).set("field", 56L).build();
+//        Utf8 key2 = new Utf8("key2");
 //        GenericRecord value2 = new GenericRecordBuilder(schema).set("field", 1234L).build();
 //        producer.send(new ProducerRecord<Object, Object>("test", key2, value2));
 //        
@@ -166,7 +167,7 @@ public class Main {
 //        	
 //        }
 //        
-//        GenericRecord key3 = new GenericRecordBuilder(schema).set("field", 67L).build();
+//        Utf8 key3 = new Utf8("key3");
 //        GenericRecord value3 = new GenericRecordBuilder(schema).set("field", 1234L).build();
 //        producer.send(new ProducerRecord<Object, Object>("test", key3, value3));
 //	}
