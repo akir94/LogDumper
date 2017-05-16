@@ -43,14 +43,15 @@ import io.confluent.kafka.serializers.KafkaAvroSerializer;
  */
 public class Main {
 	private static final String DUMP_DIRECTORY = System.getenv("DUMP_DIRECTORY");
+	private static final String KAFKA_ADDRESS = System.getenv().getOrDefault("KAFKA_ADDRESS", "localhost:9092");
 	
 	public static void main(String[] args) throws InterruptedException {
 		SchemaRegistryClient schemaRegistry = new MockSchemaRegistryClient();
 		ActorSystem system = ActorSystem.create();
 		ActorMaterializer materializer = ActorMaterializer.create(system);
 
-		Executors.newSingleThreadExecutor().submit(() -> writeSomeData(schemaRegistry));
-		Thread.sleep(2200);
+//		Executors.newSingleThreadExecutor().submit(() -> writeSomeData(schemaRegistry));
+//		Thread.sleep(2200);
 		
     	Map<String, List<PartitionInfo>> topics = getAllTopicsAndPartitions();
     	for(Map.Entry<String, List<PartitionInfo>> entry : topics.entrySet()) {
@@ -83,7 +84,7 @@ public class Main {
 
 	private static KafkaConsumer<Object, Object> createKafkaConsumer() {
 		Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_ADDRESS);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "groupId");
         return new KafkaConsumer<>(props, 
@@ -104,48 +105,48 @@ public class Main {
 			SchemaRegistryClient schemaRegistry, String topic, int partition) {
 		ConsumerSettings<Object, Object> settings = 
 				ConsumerSettings.create(system, new KafkaAvroDeserializer(schemaRegistry), new KafkaAvroDeserializer(schemaRegistry))
-			        .withBootstrapServers(System.getenv("KAFKA_ADDRESS"))
+			        .withBootstrapServers(KAFKA_ADDRESS)
 			        .withGroupId("group2")
 			        .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 		return Consumer.plainSource(settings, 
 				Subscriptions.assignmentWithOffset(new TopicPartition(topic, partition), 0));
 	}
 	
-	private static void writeSomeData(SchemaRegistryClient schemaRegistry) {
-		Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "log-dumper");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put("group.id", "groupId");
-        KafkaProducer<Object, Object> producer = new KafkaProducer<>(props, 
-        		new KafkaAvroSerializer(schemaRegistry), new KafkaAvroSerializer(schemaRegistry));
-        
-        Schema schema = SchemaBuilder.builder().record("record").fields()
-        		.name("field").type().longType().noDefault()
-        		.endRecord();
-        
-        Utf8 key1 = new Utf8("key1");
-        GenericRecord value1 = new GenericRecordBuilder(schema).set("field", 1234L).build();
-        producer.send(new ProducerRecord<Object, Object>("test", key1, value1));
-        try{
-        	Thread.sleep(2000);
-        } catch (InterruptedException e) {
-        	
-        }
-        
-        Utf8 key2 = new Utf8("key2");
-        GenericRecord value2 = new GenericRecordBuilder(schema).set("field", 1234L).build();
-        producer.send(new ProducerRecord<Object, Object>("test", key2, value2));
-        try{
-        	Thread.sleep(2000);
-        } catch (InterruptedException e) {
-        	
-        }
-        
-        Utf8 key3 = new Utf8("key3");
-        GenericRecord value3 = new GenericRecordBuilder(schema).set("field", 1234L).build();
-        producer.send(new ProducerRecord<Object, Object>("test", key3, value3));
-        
-        producer.close();
-	}
+//	private static void writeSomeData(SchemaRegistryClient schemaRegistry) {
+//		Properties props = new Properties();
+//        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "log-dumper");
+//        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_ADDRESS);
+//        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+//        props.put("group.id", "groupId");
+//        KafkaProducer<Object, Object> producer = new KafkaProducer<>(props, 
+//        		new KafkaAvroSerializer(schemaRegistry), new KafkaAvroSerializer(schemaRegistry));
+//        
+//        Schema schema = SchemaBuilder.builder().record("record").fields()
+//        		.name("field").type().longType().noDefault()
+//        		.endRecord();
+//        
+//        Utf8 key1 = new Utf8("key1");
+//        GenericRecord value1 = new GenericRecordBuilder(schema).set("field", 1234L).build();
+//        producer.send(new ProducerRecord<Object, Object>("test", key1, value1));
+//        try{
+//        	Thread.sleep(2000);
+//        } catch (InterruptedException e) {
+//        	
+//        }
+//        
+//        Utf8 key2 = new Utf8("key2");
+//        GenericRecord value2 = new GenericRecordBuilder(schema).set("field", 1234L).build();
+//        producer.send(new ProducerRecord<Object, Object>("test", key2, value2));
+//        try{
+//        	Thread.sleep(2000);
+//        } catch (InterruptedException e) {
+//        	
+//        }
+//        
+//        Utf8 key3 = new Utf8("key3");
+//        GenericRecord value3 = new GenericRecordBuilder(schema).set("field", 1234L).build();
+//        producer.send(new ProducerRecord<Object, Object>("test", key3, value3));
+//        
+//        producer.close();
+//	}
 }
