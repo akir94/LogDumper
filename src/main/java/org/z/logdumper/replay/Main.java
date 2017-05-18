@@ -2,16 +2,15 @@ package org.z.logdumper.replay;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.z.logdumper.common.DumpFiles;
+import org.z.logdumper.common.DumpFiles.TopicAndPartition;
 
 import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
@@ -30,7 +29,7 @@ public class Main {
 		executor.shutdown();
     	
 		System.out.println("initiated threads, awaiting termination");
-    	while(executor.awaitTermination(10, TimeUnit.MINUTES)) {
+    	while(!executor.awaitTermination(10, TimeUnit.MINUTES)) {
     		//zzzzz...
     	}
     	
@@ -41,20 +40,25 @@ public class Main {
 		File dumpDir = new File(DUMP_DIRECTORY);
 		File[] dumpFiles = dumpDir.listFiles();
 		for (File file : dumpFiles) {
-			if (DumpFiles.isDumpFile(file)) {
-				initThread(executor, schemaRegistry, file);
+			TopicAndPartition topicAndPartition = DumpFiles.toTopicAndPartition(file);
+			if (topicAndPartition != null) {
+				submitReplayTask(executor, schemaRegistry, file, topicAndPartition);
+			} else {
+				System.out.println("ignoring file " + file + " because it isn't a dump file");
 			}
 		}
 	}
 
-	private static void initThread(ExecutorService executor, SchemaRegistryClient schemaRegistry, File file) {
+	private static void submitReplayTask(ExecutorService executor, SchemaRegistryClient schemaRegistry, 
+			File sourceFile, TopicAndPartition topicAndPartition) {
 		try {
 			KafkaProducer<Object, Object> producer = createProducer(schemaRegistry);
-			RecordReader reader = RecordReader.create(file);
-			ReplayRecordConverter converter = createRecordConverter(file);
-			executor.submit(() -> replayRecords(producer, reader, converter, file));
+			RecordReader reader = RecordReader.create(sourceFile);
+			ReplayRecordConverter converter = new ReplayRecordConverter(topicAndPartition.topic, 
+					topicAndPartition.partition);
+			executor.submit(new ReplayTask(producer, reader, converter, sourceFile));
 		} catch (IOException | RuntimeException e) {
-			System.out.println("Failed to initialize reader for file " + file);
+			System.out.println("Failed to initialize replay task for file " + sourceFile);
 			e.printStackTrace();
 		}
 	}
@@ -64,25 +68,5 @@ public class Main {
 		props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_ADDRESS);
 		return new KafkaProducer<>(props, new KafkaAvroSerializer(schemaRegistry), 
 				new KafkaAvroSerializer(schemaRegistry));
-	}
-	
-	private static ReplayRecordConverter createRecordConverter(File file) {
-		DumpFiles.TopicAndPartition topicAndPartition = DumpFiles.toTopicAndPartition(file);
-		return new ReplayRecordConverter(topicAndPartition.topic, topicAndPartition.partition);
-	}
-	
-	private static void replayRecords(KafkaProducer<Object, Object> producer, RecordReader reader, 
-			ReplayRecordConverter converter, File file) {
-		try {
-			while(true) {
-				GenericRecord replayRecord = reader.get();
-				producer.send(converter.apply(replayRecord));
-			}
-		} catch (NoSuchElementException e) {
-			System.out.println("Finished processing messages from file " + file);
-		} catch (RuntimeException e) {
-			System.out.println("Failed to process file " + file);
-			e.printStackTrace();
-		}
 	}
 }

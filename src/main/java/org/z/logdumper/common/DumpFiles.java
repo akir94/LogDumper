@@ -14,6 +14,13 @@ public class DumpFiles {
 		return new File(topic + "-" + partition + ".dump");
 	}
 	
+	/**
+	 * Given a dump file, returns the topic and partition this file corresponds to,
+	 * or null if it's not a dump file.
+	 * 
+	 * @param file
+	 * @return topic and partition, or null if not a dump file
+	 */
 	public static TopicAndPartition toTopicAndPartition(File file) {
 		if (!isDumpFile(file)) {
 			return null;
@@ -36,7 +43,8 @@ public class DumpFiles {
 		String anyString = ".*";
 		String hyphen = "\\-";
 		String anyInteger = "\\d+";
-		return file.getName().matches(anyString + hyphen + anyInteger + "\\.dump");
+		return file.isFile() 
+				&& file.getName().matches(anyString + hyphen + anyInteger + "\\.dump");
 	}
 	
 	public static class TopicAndPartition {

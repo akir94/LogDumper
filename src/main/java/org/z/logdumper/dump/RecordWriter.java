@@ -12,6 +12,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.avro.io.DatumWriter;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.z.logdumper.common.DumpFiles;
 
 public class RecordWriter implements Consumer<ConsumerRecord<Object, Object>>{
 	File destinationFile;
@@ -26,18 +27,18 @@ public class RecordWriter implements Consumer<ConsumerRecord<Object, Object>>{
 	}
 	
 	public static RecordWriter create(String dumpDirectory, String topic, int partition) {
-		File destinationFile = new File(dumpDirectory, topic + "-" + partition + ".dump");
+		File destinationFile = DumpFiles.fromTopicAndPartition(topic, partition);
 		return new RecordWriter(destinationFile);
 	}
 	
 	@Override
 	public void accept(ConsumerRecord<Object, Object> record) {
-		System.out.println("accepting record from " + record.topic() + "-" + record.partition());
 		GenericRecord value = (GenericRecord) record.value();
 		String key = (String) record.key();
 		try {
 			initFileWriterIfNeeded(value, record.topic(), record.partition());
 			fileWriter.append(createDumpRecord(value, key, record.timestamp()));
+			fileWriter.flush();
 		} catch (IOException e) {
 			System.out.println("Failed to accept record on topic " + record.topic() + " and partition " + record.partition());
 			e.printStackTrace();
@@ -49,8 +50,7 @@ public class RecordWriter implements Consumer<ConsumerRecord<Object, Object>>{
 			Schema schema = initSchema(value.getSchema());
 			DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
 			DataFileWriter<GenericRecord> fileWriter = new DataFileWriter<>(datumWriter);
-			File destination = new File(System.getenv("DUMP_DIR"), topic + "-" + partition + ".dump");
-			fileWriter.create(schema, destination);
+			fileWriter.create(schema, destinationFile);
 			this.fileWriter = fileWriter;
 			this.dumpRecordBuilder = new GenericRecordBuilder(schema);
 		}
