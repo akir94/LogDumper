@@ -21,4 +21,4 @@ dependencies {
 	testCompile 'junit:junit:4.12'
 }
 
-mainClassName = 'org.z.logdumper.Main'
+mainClassName = 'org.z.logdumper.dump.Main'

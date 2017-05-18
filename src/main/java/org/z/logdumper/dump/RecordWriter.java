@@ -1,4 +1,4 @@
-package org.z.logdumper;
+package org.z.logdumper.dump;
 
 import java.io.File;
 import java.io.IOException;
