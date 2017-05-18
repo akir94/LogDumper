@@ -22,10 +22,11 @@ public class Main {
 	
 	public static void main(String[] args) throws InterruptedException {
 		SchemaRegistryClient schemaRegistry = new MockSchemaRegistryClient();
+		KafkaProducer<Object, Object> producer = createProducer(schemaRegistry);
 		ExecutorService executor = Executors.newCachedThreadPool();
 		
 		System.out.println("initiating threads");
-		initThreads(executor, schemaRegistry);
+		initThreads(executor, producer);
 		executor.shutdown();
     	
 		System.out.println("initiated threads, awaiting termination");
@@ -36,23 +37,29 @@ public class Main {
     	System.out.println("Done");
 	}
 	
-	private static void initThreads(ExecutorService executor, SchemaRegistryClient schemaRegistry) {
+	private static KafkaProducer<Object, Object> createProducer(SchemaRegistryClient schemaRegistry) {
+		Properties props = new Properties();
+		props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_ADDRESS);
+		return new KafkaProducer<>(props, new KafkaAvroSerializer(schemaRegistry), 
+				new KafkaAvroSerializer(schemaRegistry));
+	}
+	
+	private static void initThreads(ExecutorService executor, KafkaProducer<Object, Object> producer) {
 		File dumpDir = new File(DUMP_DIRECTORY);
 		File[] dumpFiles = dumpDir.listFiles();
 		for (File file : dumpFiles) {
 			TopicAndPartition topicAndPartition = DumpFiles.toTopicAndPartition(file);
 			if (topicAndPartition != null) {
-				submitReplayTask(executor, schemaRegistry, file, topicAndPartition);
+				submitReplayTask(executor, producer, file, topicAndPartition);
 			} else {
 				System.out.println("ignoring file " + file + " because it isn't a dump file");
 			}
 		}
 	}
 
-	private static void submitReplayTask(ExecutorService executor, SchemaRegistryClient schemaRegistry, 
+	private static void submitReplayTask(ExecutorService executor, KafkaProducer<Object, Object> producer, 
 			File sourceFile, TopicAndPartition topicAndPartition) {
 		try {
-			KafkaProducer<Object, Object> producer = createProducer(schemaRegistry);
 			RecordReader reader = RecordReader.create(sourceFile);
 			ReplayRecordConverter converter = new ReplayRecordConverter(topicAndPartition.topic, 
 					topicAndPartition.partition);
@@ -61,12 +68,5 @@ public class Main {
 			System.out.println("Failed to initialize replay task for file " + sourceFile);
 			e.printStackTrace();
 		}
-	}
-	
-	private static KafkaProducer<Object, Object> createProducer(SchemaRegistryClient schemaRegistry) {
-		Properties props = new Properties();
-		props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_ADDRESS);
-		return new KafkaProducer<>(props, new KafkaAvroSerializer(schemaRegistry), 
-				new KafkaAvroSerializer(schemaRegistry));
 	}
 }

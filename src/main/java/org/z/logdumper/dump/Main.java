@@ -50,12 +50,13 @@ public class Main {
 		ActorSystem system = ActorSystem.create();
 		ActorMaterializer materializer = ActorMaterializer.create(system);
 
-//		Executors.newSingleThreadExecutor().submit(() -> writeSomeData(schemaRegistry));
-//		Thread.sleep(2200);
+		Executors.newSingleThreadExecutor().submit(() -> writeSomeData(schemaRegistry));
+		Thread.sleep(2200);
 		
     	Map<String, List<PartitionInfo>> topics = getAllTopicsAndPartitions();
     	for(Map.Entry<String, List<PartitionInfo>> entry : topics.entrySet()) {
     		for (PartitionInfo info : entry.getValue()) {
+    			System.out.println("Creating stream for topic " + info.topic() + " and partition " + info.partition());
     			RecordWriter writer = RecordWriter.create(DUMP_DIRECTORY, info.topic(), info.partition());
     			createSource(system, schemaRegistry, info.topic(), info.partition())
     				.to(Sink.foreach(r -> writer.accept(r)))
@@ -71,6 +72,7 @@ public class Main {
 			}
 		});
     	
+    	System.out.println("done creating streams");
     	while (true) {
     		Thread.sleep(10000);
     	}
@@ -112,41 +114,41 @@ public class Main {
 				Subscriptions.assignmentWithOffset(new TopicPartition(topic, partition), 0));
 	}
 	
-//	private static void writeSomeData(SchemaRegistryClient schemaRegistry) {
-//		Properties props = new Properties();
-//        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "log-dumper");
-//        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_ADDRESS);
-//        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-//        props.put("group.id", "groupId");
-//        KafkaProducer<Object, Object> producer = new KafkaProducer<>(props, 
-//        		new KafkaAvroSerializer(schemaRegistry), new KafkaAvroSerializer(schemaRegistry));
-//        
-//        Schema schema = SchemaBuilder.builder().record("record").fields()
-//        		.name("field").type().longType().noDefault()
-//        		.endRecord();
-//        
-//        Utf8 key1 = new Utf8("key1");
-//        GenericRecord value1 = new GenericRecordBuilder(schema).set("field", 1234L).build();
-//        producer.send(new ProducerRecord<Object, Object>("test", key1, value1));
-//        try{
-//        	Thread.sleep(2000);
-//        } catch (InterruptedException e) {
-//        	
-//        }
-//        
-//        Utf8 key2 = new Utf8("key2");
-//        GenericRecord value2 = new GenericRecordBuilder(schema).set("field", 1234L).build();
-//        producer.send(new ProducerRecord<Object, Object>("test", key2, value2));
-//        try{
-//        	Thread.sleep(2000);
-//        } catch (InterruptedException e) {
-//        	
-//        }
-//        
-//        Utf8 key3 = new Utf8("key3");
-//        GenericRecord value3 = new GenericRecordBuilder(schema).set("field", 1234L).build();
-//        producer.send(new ProducerRecord<Object, Object>("test", key3, value3));
-//        
-//        producer.close();
-//	}
+	private static void writeSomeData(SchemaRegistryClient schemaRegistry) {
+		Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "log-dumper");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_ADDRESS);
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put("group.id", "groupId");
+        KafkaProducer<Object, Object> producer = new KafkaProducer<>(props, 
+        		new KafkaAvroSerializer(schemaRegistry), new KafkaAvroSerializer(schemaRegistry));
+        
+        Schema schema = SchemaBuilder.builder().record("record").fields()
+        		.name("field").type().longType().noDefault()
+        		.endRecord();
+        
+        Utf8 key1 = new Utf8("key1");
+        GenericRecord value1 = new GenericRecordBuilder(schema).set("field", 1234L).build();
+        producer.send(new ProducerRecord<Object, Object>("test", key1, value1));
+        try{
+        	Thread.sleep(2000);
+        } catch (InterruptedException e) {
+        	
+        }
+        
+        Utf8 key2 = new Utf8("key2");
+        GenericRecord value2 = new GenericRecordBuilder(schema).set("field", 1234L).build();
+        producer.send(new ProducerRecord<Object, Object>("test", key2, value2));
+        try{
+        	Thread.sleep(2000);
+        } catch (InterruptedException e) {
+        	
+        }
+        
+        Utf8 key3 = new Utf8("key3");
+        GenericRecord value3 = new GenericRecordBuilder(schema).set("field", 1234L).build();
+        producer.send(new ProducerRecord<Object, Object>("test", key3, value3));
+        
+        producer.close();
+	}
 }
