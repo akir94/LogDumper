@@ -12,6 +12,15 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+/**
+ * Replays messages by reading them from a supplier, converting them to a ProducerRecord,
+ * sending them to a KafkaProducer.
+ * 
+ * Also sleeps between sending the messages, to better simulate the original execution.
+ * 
+ * @author akir94
+ *
+ */
 public class ReplayTask implements Runnable {
 
 	private KafkaProducer<Object, Object> producer;
@@ -54,7 +63,7 @@ public class ReplayTask implements Runnable {
 		private Instant lastSendInstant;  // the instant we sent the previous message
 		
 		public void sleepUntilNextSend(Instant currentRecordTimestamp) throws InterruptedException {
-			if (lastSendInstant == null) { // first send
+			if (lastSendInstant == null || lastRecordTimestamp == null) { // first send
 				return;
 			} else {
 				Objects.requireNonNull(lastRecordTimestamp);

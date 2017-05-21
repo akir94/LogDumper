@@ -3,7 +3,6 @@ package org.z.logdumper.replay;
 import java.util.function.Function;
 
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.util.Utf8;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 /**
@@ -27,9 +26,8 @@ public class ReplayRecordConverter implements Function<GenericRecord, ProducerRe
 	
 	@Override
 	public ProducerRecord<Object, Object> apply(GenericRecord replayRecord) {
-		Utf8 key = (Utf8) replayRecord.get("key");
-		GenericRecord value = (GenericRecord) replayRecord.get("value");
-		return new ProducerRecord<Object, Object>(topic, partition, key, value);
+		return new ProducerRecord<Object, Object>(topic, partition, replayRecord.get("key"), 
+				replayRecord.get("value"));
 	}
 
 }
