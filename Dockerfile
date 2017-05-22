@@ -8,7 +8,7 @@ USER gradle
 WORKDIR /home/gradle/src
 
 RUN gradle build
-RUN tar -xvf build/distributions/LogDumper.tar
+RUN tar xvf build/distributions/LogDumper.tar
 
 ENV KAFKA_ADDRESS "localhost:9092"
 ENV DUMP_FILE "/tmp/dump_file"
