@@ -4,7 +4,8 @@ RUN mkdir -p /home/gradle/src
 WORKDIR /home/gradle/src
 
 COPY . /home/gradle/src
-RUN gradle --debug build
+USER root
+RUN gradle build
 RUN tar -xvf build/distributions/LogDumper.tar
 
 ENV KAFKA_ADDRESS "localhost:9092"
