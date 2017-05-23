@@ -12,4 +12,4 @@ ENV KAFKA_ADDRESS "localhost:9092"
 ENV DUMP_FILE "/tmp/dump_file"
 
 WORKDIR /home/gradle/src/src/lib
-CMD java -cp "*" org.z.logdumper.Main
+CMD java -cp "*" org.z.logdumper.dump.Main
