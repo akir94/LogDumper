@@ -1,7 +1,7 @@
 FROM gradle:jdk8-alpine
 
 RUN mkdir -p /home/gradle/src
-COPY . /home/gradle/src
+COPY . /tmp/src
 RUN cp -r /tmp/src /home/gradle
 
 WORKDIR /home/gradle/src
