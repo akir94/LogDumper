@@ -1,15 +1,11 @@
 FROM gradle:jdk8-alpine
 
 RUN mkdir -p /home/gradle/src
-COPY . /tmp/src
-RUN cp -r /tmp/src /home/gradle
-
 WORKDIR /home/gradle/src
+
+COPY . /home/gradle/src
 RUN gradle build
-RUN ls -l
-RUN ls -l build
-RUN ls -l build/distributions
-RUN tar xvf build/distributions/LogDumper.tar
+RUN tar xvf build/distributions/src.tar
 
 ENV KAFKA_ADDRESS "localhost:9092"
 ENV DUMP_FILE "/tmp/dump_file"
