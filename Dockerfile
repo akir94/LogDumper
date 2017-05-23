@@ -1,12 +1,10 @@
 FROM gradle:jdk8-alpine
 
 RUN mkdir -p /home/gradle/src
-USER root
-COPY . /home/gradle/src
-RUN chown -R gradle:gradle /home/gradle/src
-USER gradle
-WORKDIR /home/gradle/src
+COPY . /tmp/src
+RUN cp -r /tmp/src /home/gradle
 
+WORKDIR /home/gradle/src
 RUN gradle build
 RUN tar xvf build/distributions/LogDumper.tar
 
