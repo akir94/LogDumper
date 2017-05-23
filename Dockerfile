@@ -6,6 +6,9 @@ RUN cp -r /tmp/src /home/gradle
 
 WORKDIR /home/gradle/src
 RUN gradle build
+RUN ls -l
+RUN ls -l build
+RUN ls -l build/distributions
 RUN tar xvf build/distributions/LogDumper.tar
 
 ENV KAFKA_ADDRESS "localhost:9092"
