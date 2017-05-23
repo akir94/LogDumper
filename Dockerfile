@@ -7,12 +7,9 @@ RUN cp -r /tmp/src /home/gradle
 WORKDIR /home/gradle/src
 RUN gradle build
 RUN tar xvf build/distributions/src.tar
-RUN ls -l
-RUN ls -l LogDumper
-RUN ls -l src
 
 ENV KAFKA_ADDRESS "localhost:9092"
 ENV DUMP_FILE "/tmp/dump_file"
 
-WORKDIR /home/gradle/src/LogDumper/lib
+WORKDIR /home/gradle/src/src/lib
 CMD java -cp "*" org.z.logdumper.Main
