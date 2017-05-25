@@ -12,7 +12,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.z.logdumper.common.DumpFiles;
 import org.z.logdumper.common.DumpFiles.TopicAndPartition;
 
-import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
+import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 
@@ -21,7 +21,9 @@ public class Main {
 	private static final String KAFKA_ADDRESS = System.getenv().getOrDefault("KAFKA_ADDRESS", "localhost:9092");
 	
 	public static void main(String[] args) throws InterruptedException {
-		SchemaRegistryClient schemaRegistry = new MockSchemaRegistryClient();
+//		SchemaRegistryClient schemaRegistry = new MockSchemaRegistryClient();
+		SchemaRegistryClient schemaRegistry = new CachedSchemaRegistryClient(System.getenv("SCHEMA_REGISTRY_ADDRESS"), 
+				Integer.parseInt(System.getenv("SCHEMA_REGISTRY_IDENTITY")));
 		KafkaProducer<Object, Object> producer = createProducer(schemaRegistry);
 		ExecutorService executor = Executors.newCachedThreadPool();
 		

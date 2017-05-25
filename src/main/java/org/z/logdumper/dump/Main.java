@@ -29,7 +29,7 @@ import akka.kafka.javadsl.Consumer;
 import akka.stream.ActorMaterializer;
 import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
-import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
+import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
@@ -46,7 +46,9 @@ public class Main {
 	private static final String KAFKA_ADDRESS = System.getenv().getOrDefault("KAFKA_ADDRESS", "localhost:9092");
 	
 	public static void main(String[] args) throws InterruptedException {
-		SchemaRegistryClient schemaRegistry = new MockSchemaRegistryClient();
+//		SchemaRegistryClient schemaRegistry = new MockSchemaRegistryClient();
+		SchemaRegistryClient schemaRegistry = new CachedSchemaRegistryClient(System.getenv("SCHEMA_REGISTRY_ADDRESS"), 
+				Integer.parseInt(System.getenv("SCHEMA_REGISTRY_IDENTITY")));
 		ActorSystem system = ActorSystem.create();
 		ActorMaterializer materializer = ActorMaterializer.create(system);
 
