@@ -50,7 +50,7 @@ public class Main {
 		File dumpDir = new File(DUMP_DIRECTORY);
 		File[] dumpFiles = dumpDir.listFiles();
 		for (File file : dumpFiles) {
-			TopicAndPartition topicAndPartition = DumpFiles.toTopicAndPartition(file);
+			TopicAndPartition topicAndPartition = DumpFiles.topicAndPartitionFromName(file.getName());
 			if (topicAndPartition != null) {
 				submitReplayTask(executor, producer, file, topicAndPartition);
 			} else {

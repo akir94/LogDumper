@@ -52,17 +52,19 @@ public class Main {
 		ActorSystem system = ActorSystem.create();
 		ActorMaterializer materializer = ActorMaterializer.create(system);
 
-		Executors.newSingleThreadExecutor().submit(() -> writeSomeData(schemaRegistry));
-		Thread.sleep(2200);
+//		Executors.newSingleThreadExecutor().submit(() -> writeSomeData(schemaRegistry));
+//		Thread.sleep(2200);
 		
     	Map<String, List<PartitionInfo>> topics = getAllTopicsAndPartitions();
     	for(Map.Entry<String, List<PartitionInfo>> entry : topics.entrySet()) {
     		for (PartitionInfo info : entry.getValue()) {
-    			System.out.println("Creating stream for topic " + info.topic() + " and partition " + info.partition());
-    			RecordWriter writer = RecordWriter.create(DUMP_DIRECTORY, info.topic(), info.partition());
-    			createSource(system, schemaRegistry, info.topic(), info.partition())
-    				.to(Sink.foreach(r -> writer.accept(r)))
-    				.run(materializer);
+    			if (shouldBeDumped(info)) {
+	    			System.out.println("Creating stream for topic " + info.topic() + " and partition " + info.partition());
+	    			RecordWriter writer = RecordWriter.create(DUMP_DIRECTORY, info.topic(), info.partition());
+	    			createSource(system, schemaRegistry, info.topic(), info.partition())
+	    				.to(Sink.foreach(r -> writer.accept(r)))
+	    				.run(materializer);
+    			}
     		}
     	}
     	
@@ -103,6 +105,10 @@ public class Main {
 			@Override
 			public void onPartitionsAssigned(Collection<TopicPartition> partitions) {}
 		});
+	}
+	
+	private static boolean shouldBeDumped(PartitionInfo info) {
+		return !info.topic().startsWith("_");  // likely internal topic of kafka
 	}
 	
 	private static Source<ConsumerRecord<Object, Object>, Consumer.Control> createSource(ActorSystem system, 

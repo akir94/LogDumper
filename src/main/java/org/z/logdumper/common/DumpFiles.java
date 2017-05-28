@@ -1,6 +1,5 @@
 package org.z.logdumper.common;
 
-import java.io.File;
 import java.util.Arrays;
 
 /**
@@ -10,8 +9,8 @@ import java.util.Arrays;
  *
  */
 public class DumpFiles {
-	public static File fromTopicAndPartition(String topic, int partition) {
-		return new File(topic + "-" + partition + ".dump");
+	public static String nameFromTopicAndPartition(String topic, int partition) {
+		return topic + "-" + partition + ".dump";
 	}
 	
 	/**
@@ -21,12 +20,11 @@ public class DumpFiles {
 	 * @param file
 	 * @return topic and partition, or null if not a dump file
 	 */
-	public static TopicAndPartition toTopicAndPartition(File file) {
-		if (!isDumpFile(file)) {
+	public static TopicAndPartition topicAndPartitionFromName(String fileName) {
+		if (!isDumpFile(fileName)) {
 			return null;
 		} else {
 			try {
-				String fileName = file.getName();
 				String withoutSuffix = fileName.substring(0, fileName.length()-5);
 				String[] parts = withoutSuffix.split("-");
 				String[] topicParts = Arrays.copyOfRange(parts, 0, parts.length-1);
@@ -39,12 +37,11 @@ public class DumpFiles {
 		}
 	}
 	
-	public static boolean isDumpFile(File file) {
+	public static boolean isDumpFile(String fileName) {
 		String anyString = ".*";
 		String hyphen = "\\-";
 		String anyInteger = "\\d+";
-		return file.isFile() 
-				&& file.getName().matches(anyString + hyphen + anyInteger + "\\.dump");
+		return fileName.matches(anyString + hyphen + anyInteger + "\\.dump");
 	}
 	
 	public static class TopicAndPartition {

@@ -1,5 +1,6 @@
 package org.z.logdumper.dump;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.function.Consumer;
@@ -14,7 +15,7 @@ import org.apache.avro.io.DatumWriter;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.z.logdumper.common.DumpFiles;
 
-public class RecordWriter implements Consumer<ConsumerRecord<Object, Object>>{
+public class RecordWriter implements Consumer<ConsumerRecord<Object, Object>>, Closeable{
 	File destinationFile;
 	DataFileWriter<GenericRecord> fileWriter;
 	GenericRecordBuilder dumpRecordBuilder;
@@ -27,19 +28,20 @@ public class RecordWriter implements Consumer<ConsumerRecord<Object, Object>>{
 	}
 	
 	public static RecordWriter create(String dumpDirectory, String topic, int partition) {
-		File destinationFile = DumpFiles.fromTopicAndPartition(topic, partition);
+		String dumpFileName = DumpFiles.nameFromTopicAndPartition(topic, partition);
+		File destinationFile = new File(dumpDirectory, dumpFileName);
 		return new RecordWriter(destinationFile);
 	}
 	
 	@Override
 	public void accept(ConsumerRecord<Object, Object> record) {
-		GenericRecord value = (GenericRecord) record.value();
-		String key = (String) record.key();
 		try {
+			GenericRecord value = (GenericRecord) record.value();
+			String key = (String) record.key();
 			initFileWriterIfNeeded(value, record.topic(), record.partition());
 			fileWriter.append(createDumpRecord(value, key, record.timestamp()));
 			fileWriter.flush();
-		} catch (IOException e) {
+		} catch (RuntimeException | IOException e) {
 			System.out.println("Failed to accept record on topic " + record.topic() + " and partition " + record.partition());
 			e.printStackTrace();
 		}
@@ -70,5 +72,12 @@ public class RecordWriter implements Consumer<ConsumerRecord<Object, Object>>{
 			.set("value", value)
 			.set("timestamp", timestamp)
 			.build();
+	}
+
+	@Override
+	public void close() throws IOException {
+		if (fileWriter != null) {
+			fileWriter.close();
+		}
 	}
 }
